@@ -55,7 +55,63 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        down = (TextView) findViewById(R.id.down);
+        progress = (TextView) findViewById(R.id.progress);
+        pb_update = (ProgressBar) findViewById(R.id.pb_update);
+        down.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (requestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,Code_PERMISSION)){
+                    onDownBegin();
+                }else{
+                    Toast.makeText(MainActivity.this,"权限未开启",Toast.LENGTH_SHORT);
+                }
+            }
+        });
+        initLoadApp();
+    }
 
+    /**
+     * 初始化创建下载对象
+     */
+    private void initLoadApp() {
+        downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+        request = new DownloadManager.Request(Uri.parse(downloadUrl));
+        request.setTitle("app-release.apk");
+        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI);
+        request.setAllowedOverRoaming(false);
+        request.setMimeType("application/vnd.android.package-archive");
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        //设置文件存放路径
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "app-release.apk");
+    }
+
+    //开始下载
+    private void onDownBegin() {
+        try {
+            id = downloadManager.enqueue(request);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            //更新UI
+            observer = new DownloadChangeObserver(handler);
+            getContentResolver().registerContentObserver(CONTENT_URI, true, observer);
+            //安装
+            completeReceiver = new DownloadReceiver();
+            registerReceiver(completeReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+            down.setText("正在下载");
+            down.setClickable(false);
+        }
+    }
+
+    /**
+     * 下载监听
+     */
     class DownloadChangeObserver extends ContentObserver {
 
         public DownloadChangeObserver(Handler handler) {
@@ -73,7 +129,8 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceive(final Context context, final Intent intent) {
-            Log.i("aaa", "广播监听");
+            Log.i("aaa", "广播监听,下载完成开始安装");
+            down.setClickable(true);
             //  安装APK
             long completeDownLoadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
             Intent intentInstall = new Intent();
@@ -128,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 new AlertDialog.Builder(this)
                         .setTitle("权限申请")
-                        .setMessage("亲，没有权限我会崩溃，请把权限赐予我吧！")
+                        .setMessage("Android8.0未知来源应用安装权限")
                         .setPositiveButton("赏给你", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
@@ -158,38 +215,6 @@ public class MainActivity extends AppCompatActivity {
         Log.i("aaa", "app下载完成了，开始安装。。。"+uri);
         intentInstall.setDataAndType(uri, "application/vnd.android.package-archive");
         context.startActivity(intentInstall);
-    }
-
-
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        down = (TextView) findViewById(R.id.down);
-        progress = (TextView) findViewById(R.id.progress);
-        pb_update = (ProgressBar) findViewById(R.id.pb_update);
-        down.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                LoadApp();
-                requestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,Code_PERMISSION);
-            }
-        });
-    }
-
-    private void LoadApp() {
-        //创建下载对象
-        downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-        request = new DownloadManager.Request(Uri.parse(downloadUrl));
-        request.setTitle("app-release.apk");
-        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI);
-        request.setAllowedOverRoaming(false);
-        request.setMimeType("application/vnd.android.package-archive");
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-
-        //设置文件存放路径
-        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "app-release.apk");
     }
 
     private void updateView() {
@@ -241,24 +266,6 @@ public class MainActivity extends AppCompatActivity {
         return targetApkFile;
     }
 
-    //开始下载
-    private void onDownBegin() {
-        try {
-            id = downloadManager.enqueue(request);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            //更新UI
-            observer = new DownloadChangeObserver(handler);
-            getContentResolver().registerContentObserver(CONTENT_URI, true, observer);
-            //安装
-            completeReceiver = new DownloadReceiver();
-            registerReceiver(completeReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
-            down.setText("正在下载");
-            down.setClickable(false);
-        }
-    }
 
     @Override
     protected void onDestroy() {
@@ -286,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,ManifestPermission)) {
                 new AlertDialog.Builder(this)
                         .setTitle("权限申请")
-                        .setMessage("亲，没有权限我会崩溃，请把权限赐予我吧！")
+                        .setMessage("亲，没有权限我会崩溃，请把网络和写入权限赐予我吧！")
                         .setPositiveButton("赏给你", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
