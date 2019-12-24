@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        该方式提供在应用的外部存储区根目录的下的文件。
+   它对应Context#getExternalFilesDir(String) Context.getExternalFilesDir(null)返回的路径。
+   eg:”/storage/emulated/0/Android/data/com.jph.simple/files”
+    -->
+
+    <external-path name="download" path="." />
+
+</paths>
+
